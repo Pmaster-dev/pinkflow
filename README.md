@@ -24,6 +24,8 @@ PinkFlow (part of MBTQ.dev) is a **Deaf-First ecosystem** built to empower entre
 - [Community](#-community)
 - [License](#-license)
 
+📚 **[Complete Documentation Index](DOCS_INDEX.md)** - Find all documentation in one place
+
 ---
 
 ## 🌐 Overview
@@ -83,6 +85,17 @@ See [webapp/README.md](webapp/README.md) for setup instructions.
 ---
 
 ## 🚀 Getting Started
+
+### 🆕 New to PinkFlow?
+
+**Start here!** Our comprehensive onboarding guide will walk you through everything:
+
+📘 **[Onboarding Guide](ONBOARDING.md)** - Complete step-by-step guide for new contributors
+
+Quick links:
+- 🌿 [Branch Naming Conventions](BRANCH_NAMING.md)
+- 🏷️ [Labels Guide](LABELS.md)
+- 🤝 [Contributing Guidelines](CONTRIBUTING.md)
 
 ### Prerequisites
 
@@ -188,7 +201,7 @@ REACT_APP_WS_URL=ws://localhost:3001
     * **DeafAuth** (Identity & Authentication)
     * **PinkSync** (Real-time sync & notifications)
     * **FibonRose** (Trust & Ethics Engine)
-    * **360Magicians** (AI Business Agents)
+    * **360Magicians** (AI Business Agents) - [See Agents Documentation](context/agents.md)
   * SQLAlchemy models for unified schema
   * API routers & placeholder services
   * JSON schema contract (`build.json`)
@@ -355,6 +368,8 @@ We welcome contributions from everyone! Here's how you can help:
 
 ### Ways to Contribute
 
+**New here?** See our [Onboarding Guide](ONBOARDING.md) for detailed instructions!
+
 - **Report bugs**: Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md)
 - **Suggest features**: Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.md)
 - **Improve documentation**: Use the [documentation template](.github/ISSUE_TEMPLATE/documentation.md)
@@ -366,10 +381,11 @@ We welcome contributions from everyone! Here's how you can help:
 
 1. Read the [Code of Conduct](CODE_OF_CONDUCT.md)
 2. Read the [Contributing Guidelines](CONTRIBUTING.md)
-3. Find an issue to work on or create a new one
-4. Fork the repository and create a branch
-5. Make your changes following our standards
-6. Submit a pull request
+3. **New contributors**: Check out the [Onboarding Guide](ONBOARDING.md)
+4. Find an issue to work on or create a new one
+5. Fork the repository and create a branch (see [Branch Naming](BRANCH_NAMING.md))
+6. Make your changes following our standards
+7. Submit a pull request
 
 ### Recognition
 
