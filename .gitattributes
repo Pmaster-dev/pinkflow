@@ -1,0 +1,4 @@
+* text=auto
+*.md linguist-documentation
+*.py linguist-language=Python
+*.js linguist-language=JavaScript
