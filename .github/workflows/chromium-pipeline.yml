@@ -160,20 +160,27 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
 
       - name: Build Docker image
+        id: docker-build
         uses: docker/build-push-action@v6
         with:
           context: .
           file: marketing-site/Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Compute short SHA
+        if: github.event_name == 'pull_request'
+        id: short-sha
+        run: echo "value=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
       - name: Export image as tar artifact (PRs only)
         if: github.event_name == 'pull_request'
         run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-$(echo ${{ github.sha }} | head -c 7)"
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.short-sha.outputs.value }}"
           if docker image inspect "$IMAGE_TAG" > /dev/null 2>&1; then
             docker save "$IMAGE_TAG" -o /tmp/pinkflow-image.tar
           else
