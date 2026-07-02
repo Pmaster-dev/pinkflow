@@ -111,24 +111,18 @@ jobs:
         id: scan
         run: |
           echo "=== Deeply nested files (depth >= 5) ==="
-          FILES=$(find . -mindepth 5 -type f \
-            ! -path './.git/*' \
-            ! -path './node_modules/*' \
-            ! -path './.next/*' \
-            ! -path './dist/*' \
-            ! -path './build/*' \
-            ! -path './target/*' \
-            ! -path './.cache/*' \
-            | sort)
-          echo "$FILES"
-          COUNT=$(echo "$FILES" | grep -c . || true)
+          find . -mindepth 5 \
+            \( -path '*/.git' -o -path '*/node_modules' -o -path '*/.next' -o -path '*/dist' -o -path '*/build' -o -path '*/target' -o -path '*/.cache' \) -prune -o \
+            -type f -print \
+            | sort > /tmp/deep-nested-files.txt
+          cat /tmp/deep-nested-files.txt
+          COUNT=$(wc -l < /tmp/deep-nested-files.txt | tr -d ' ')
           echo "Total: $COUNT files at depth >= 5"
           {
             echo "file_list<<EOF"
-            echo "$FILES"
+            cat /tmp/deep-nested-files.txt
             echo "EOF"
-          } >> $GITHUB_OUTPUT
-          echo "$FILES" > /tmp/deep-nested-files.txt
+          } >> "$GITHUB_OUTPUT"
 
       - name: Upload deep-file discovery report
         uses: actions/upload-artifact@v4
