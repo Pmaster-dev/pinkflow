@@ -124,6 +124,40 @@ The PinkFlow ecosystem includes multiple components. Depending on what you're wo
 
 ## 📝 Submission Guidelines
 
+## ✅ CI Matrix and Reporting
+
+PinkFlow CI uses a component matrix on `main` with path-aware PR checks.
+
+### Matrix components and checks
+
+- `webapp/frontend`
+  - `npm run lint` (reported, non-blocking while baseline issues are being cleaned up)
+  - `npm run type-check` (reported, non-blocking while baseline issues are being cleaned up)
+  - `npm run test -- --run` (reported, non-blocking while baseline issues are being cleaned up)
+- `webapp/backend`
+  - `python -m pytest tests -q`
+- `marketing-site`
+  - `npm run lint` (reported, non-blocking while baseline issues are being cleaned up)
+  - `npm run type-check`
+  - `npm run build`
+
+### Trigger strategy
+
+- Pull requests run checks only for changed components.
+- Pushes to `main` run the full component matrix.
+
+### Report and artifact contract
+
+Each component writes outputs under `ci-reports/<component-id>/` and uploads artifacts:
+
+- logs (`install.log`, `lint.log`, `type-check.log`, `test.log`, `build.log` as applicable)
+- backend `junit.xml` test report
+- optional `status.txt` with check-by-check status for non-blocking and blocking checks
+- per-component summary artifact (`ci-summary-<component-id>`)
+
+A final CI summary job aggregates per-component summaries into the workflow run summary.
+
+
 ### Pull Request Process
 
 1. **Update documentation** to reflect any changes
