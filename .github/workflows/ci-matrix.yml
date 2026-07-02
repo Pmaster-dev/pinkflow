@@ -1,0 +1,191 @@
+name: CI Matrix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'webapp/frontend/**'
+      - 'webapp/backend/**'
+      - 'webapp/tests/**'
+      - 'marketing-site/**'
+      - '.github/workflows/ci-matrix.yml'
+      - 'CONTRIBUTING.md'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed components
+    runs-on: ubuntu-latest
+    outputs:
+      webapp_frontend: ${{ steps.filter.outputs.webapp_frontend }}
+      webapp_backend: ${{ steps.filter.outputs.webapp_backend }}
+      marketing_site: ${{ steps.filter.outputs.marketing_site }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            webapp_frontend:
+              - 'webapp/frontend/**'
+            webapp_backend:
+              - 'webapp/backend/**'
+              - 'webapp/tests/**'
+            marketing_site:
+              - 'marketing-site/**'
+
+  component-checks:
+    name: ${{ matrix.component.name }} checks
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      github.event_name != 'pull_request' ||
+      (matrix.component.id == 'webapp-frontend' && needs.changes.outputs.webapp_frontend == 'true') ||
+      (matrix.component.id == 'webapp-backend' && needs.changes.outputs.webapp_backend == 'true') ||
+      (matrix.component.id == 'marketing-site' && needs.changes.outputs.marketing_site == 'true')
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - id: webapp-frontend
+            name: Webapp Frontend
+            path: webapp/frontend
+          - id: webapp-backend
+            name: Webapp Backend
+            path: webapp
+          - id: marketing-site
+            name: Marketing Site
+            path: marketing-site
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: matrix.component.id != 'webapp-backend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        if: matrix.component.id == 'webapp-backend'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run component checks and write reports
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          report_root="ci-reports/${{ matrix.component.id }}"
+          mkdir -p "${report_root}"
+
+          if [ "${{ matrix.component.id }}" = "webapp-frontend" ]; then
+            cd "${{ matrix.component.path }}"
+            npm install --legacy-peer-deps 2>&1 | tee "../../${report_root}/install.log"
+            lint_status=0
+            typecheck_status=0
+            test_status=0
+
+            npm run lint 2>&1 | tee "../../${report_root}/lint.log" || lint_status=$?
+            npm run type-check 2>&1 | tee "../../${report_root}/type-check.log" || typecheck_status=$?
+            npm run test -- --run 2>&1 | tee "../../${report_root}/test.log" || test_status=$?
+
+            {
+              echo "lint_status=${lint_status} (non-blocking)"
+              echo "typecheck_status=${typecheck_status} (non-blocking)"
+              echo "test_status=${test_status} (non-blocking)"
+            } > "../../${report_root}/status.txt"
+
+          elif [ "${{ matrix.component.id }}" = "webapp-backend" ]; then
+            cd "${{ matrix.component.path }}"
+            python -m pip install --upgrade pip 2>&1 | tee "../${report_root}/pip-upgrade.log"
+            python -m pip install -r backend/requirements.txt 2>&1 | tee "../${report_root}/install.log"
+            python -m pytest tests --junitxml "../${report_root}/junit.xml" -q 2>&1 | tee "../${report_root}/test.log"
+
+          else
+            cd "${{ matrix.component.path }}"
+            npm ci 2>&1 | tee "../${report_root}/install.log"
+            lint_status=0
+            typecheck_status=0
+            build_status=0
+
+            npm run lint 2>&1 | tee "../${report_root}/lint.log" || lint_status=$?
+            npm run type-check 2>&1 | tee "../${report_root}/type-check.log" || typecheck_status=$?
+            npm run build 2>&1 | tee "../${report_root}/build.log" || build_status=$?
+
+            {
+              echo "lint_status=${lint_status} (non-blocking)"
+              echo "typecheck_status=${typecheck_status} (blocking)"
+              echo "build_status=${build_status} (blocking)"
+            } > "../${report_root}/status.txt"
+
+            if [ "${typecheck_status}" -ne 0 ] || [ "${build_status}" -ne 0 ]; then
+              exit 1
+            fi
+          fi
+
+      - name: Upload component reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-reports-${{ matrix.component.id }}
+          path: ci-reports/${{ matrix.component.id }}
+          if-no-files-found: error
+
+      - name: Write component summary
+        if: always()
+        run: |
+          report_root="ci-reports/${{ matrix.component.id }}"
+          {
+            echo "## ${{ matrix.component.name }}"
+            echo "- Result: ${{ job.status }}"
+            echo "- Reports artifact: ci-reports-${{ matrix.component.id }}"
+            if [ -f "${report_root}/status.txt" ]; then
+              echo "- Check statuses:"
+              sed 's/^/  - /' "${report_root}/status.txt"
+            fi
+          } > "${report_root}/summary.md"
+
+      - name: Upload component summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-summary-${{ matrix.component.id }}
+          path: ci-reports/${{ matrix.component.id }}/summary.md
+
+  ci-summary:
+    name: CI summary
+    runs-on: ubuntu-latest
+    needs: [component-checks]
+    if: always()
+    steps:
+      - name: Download summary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ci-summary-*
+          path: ci-summary
+          merge-multiple: true
+
+      - name: Publish workflow summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "# CI Matrix Summary" >> "$GITHUB_STEP_SUMMARY"
+          if ls ci-summary/*.md >/dev/null 2>&1; then
+            for file in ci-summary/*.md; do
+              cat "$file" >> "$GITHUB_STEP_SUMMARY"
+              echo >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "No component jobs ran for this change set." >> "$GITHUB_STEP_SUMMARY"
+          fi
