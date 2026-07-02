@@ -59,11 +59,23 @@ jobs:
 
       - name: Run headless Chromium smoke test
         run: |
-          node - <<'EOF'
+          node - <<'EOF' 2>&1 | tee /tmp/chromium-smoke.log
+          const fs = require('fs');
           const puppeteer = require('puppeteer-core');
+          const candidates = [
+            process.env.CHROME_BIN,
+            '/usr/bin/chromium-browser',
+            '/usr/bin/chromium',
+            '/usr/bin/google-chrome',
+            '/usr/bin/google-chrome-stable',
+          ].filter(Boolean);
+          const executablePath = candidates.find((p) => fs.existsSync(p));
+          if (!executablePath) {
+            throw new Error(`Chromium executable not found. Tried: ${candidates.join(', ')}`);
+          }
           (async () => {
             const browser = await puppeteer.launch({
-              executablePath: '/usr/bin/chromium-browser',
+              executablePath,
               args: ['--no-sandbox', '--disable-setuid-sandbox', '--headless=new'],
             });
             const page = await browser.newPage();
