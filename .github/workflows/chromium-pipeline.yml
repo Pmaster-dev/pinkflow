@@ -6,24 +6,14 @@ on:
     paths:
       - "src/**"
       - "webapp/**"
-      - "webapp/frontend/src/**"
-      - "webapp/frontend/src/components/**"
-      - "webapp/frontend/src/pages/**"
       - "marketing-site/**"
-      - "marketing-site/app/**"
-      - "marketing-site/Dockerfile"
       - ".github/workflows/chromium-pipeline.yml"
   pull_request:
     branches: ["master"]
     paths:
       - "src/**"
       - "webapp/**"
-      - "webapp/frontend/src/**"
-      - "webapp/frontend/src/components/**"
-      - "webapp/frontend/src/pages/**"
       - "marketing-site/**"
-      - "marketing-site/app/**"
-      - "marketing-site/Dockerfile"
       - ".github/workflows/chromium-pipeline.yml"
   workflow_dispatch:
 
@@ -113,13 +103,19 @@ jobs:
             ! -path './.git/*' \
             ! -path './node_modules/*' \
             ! -path './.next/*' \
+            ! -path './dist/*' \
+            ! -path './build/*' \
+            ! -path './target/*' \
+            ! -path './.cache/*' \
             | sort)
           echo "$FILES"
-          # Write summary
           COUNT=$(echo "$FILES" | grep -c . || true)
           echo "Total: $COUNT files at depth >= 5"
-          echo "file_list=$FILES" >> $GITHUB_OUTPUT
-          # Also write to a report file
+          {
+            echo "file_list<<EOF"
+            echo "$FILES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
           echo "$FILES" > /tmp/deep-nested-files.txt
 
       - name: Upload deep-file discovery report
@@ -177,9 +173,13 @@ jobs:
       - name: Export image as tar artifact (PRs only)
         if: github.event_name == 'pull_request'
         run: |
-          docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$(echo ${{ github.sha }} | head -c 7) \
-            -o /tmp/pinkflow-image.tar || \
-          docker save $(docker images -q | head -1) -o /tmp/pinkflow-image.tar
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-$(echo ${{ github.sha }} | head -c 7)"
+          if docker image inspect "$IMAGE_TAG" > /dev/null 2>&1; then
+            docker save "$IMAGE_TAG" -o /tmp/pinkflow-image.tar
+          else
+            echo "Expected image $IMAGE_TAG not found; skipping export."
+            exit 1
+          fi
 
       - name: Upload image artifact (PRs only)
         if: github.event_name == 'pull_request'
