@@ -43,33 +43,39 @@ jobs:
             let configContent;
 
             for (const source of sources) {
+              let response;
+
               try {
-                const response = await github.rest.repos.getContent({
+                response = await github.rest.repos.getContent({
                   owner: source.owner,
                   repo: source.repo,
                   path: configPath,
                   ref: source.ref,
                 });
-
-                if (Array.isArray(response.data) || response.data.type !== 'file' || !response.data.content) {
-                  let reason = 'received empty file content';
-
-                  if (Array.isArray(response.data)) {
-                    reason = 'received a directory listing';
-                  } else if (response.data.type !== 'file') {
-                    reason = `received type "${response.data.type}"`;
-                  }
-
-                  throw new Error(`Unable to read ${configPath} at ${source.owner}/${source.repo}@${source.ref}: ${reason}.`);
-                }
-
-                configContent = Buffer.from(response.data.content, response.data.encoding).toString('utf8');
-                break;
               } catch (error) {
-                if (error.status !== 404) {
-                  throw new Error(`Failed to load ${configPath} from ${source.owner}/${source.repo}@${source.ref}: ${error.message}`);
+                if (error.status === 404) {
+                  continue;
                 }
+
+                throw new Error(`Failed to load ${configPath} from ${source.owner}/${source.repo}@${source.ref}: ${error.message}`);
               }
+
+              let reason;
+
+              if (Array.isArray(response.data)) {
+                reason = 'received a directory listing';
+              } else if (response.data.type !== 'file') {
+                reason = `received type "${response.data.type}"`;
+              } else if (response.data.content === undefined) {
+                reason = 'received no file content';
+              }
+
+              if (reason) {
+                throw new Error(`Unable to read ${configPath} at ${source.owner}/${source.repo}@${source.ref}: ${reason}.`);
+              }
+
+              configContent = Buffer.from(response.data.content, response.data.encoding).toString('utf8');
+              break;
             }
 
             if (!configContent) {
