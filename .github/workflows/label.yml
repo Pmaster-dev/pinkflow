@@ -75,7 +75,12 @@ jobs:
                 throw new Error(`Unable to read ${configPath} at ${source.owner}/${source.repo}@${source.ref}: ${reason}.`);
               }
 
-              configContent = Buffer.from(response.data.content, response.data.encoding).toString('utf8');
+              try {
+                configContent = Buffer.from(response.data.content, response.data.encoding).toString('utf8');
+              } catch (error) {
+                throw new Error(`Unable to decode ${configPath} at ${source.owner}/${source.repo}@${source.ref} using ${response.data.encoding}: ${error.message}`);
+              }
+
               break;
             }
 
