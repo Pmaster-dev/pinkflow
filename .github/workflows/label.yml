@@ -27,8 +27,9 @@ jobs:
             const configPath = '.github/labeler.yml';
             const pullRequest = context.payload.pull_request;
             const headRepo = pullRequest.head.repo;
+            const isSameRepositoryPullRequest = headRepo && headRepo.full_name === `${context.repo.owner}/${context.repo.repo}`;
             const sources = [
-              ...(headRepo ? [{
+              ...(isSameRepositoryPullRequest ? [{
                 owner: headRepo.owner.login,
                 repo: headRepo.name,
                 ref: pullRequest.head.sha,
