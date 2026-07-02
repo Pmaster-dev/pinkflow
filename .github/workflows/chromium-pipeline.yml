@@ -102,7 +102,7 @@ jobs:
     name: Discover Deep Nested Source Files
     runs-on: ubuntu-latest
     outputs:
-      file-list: ${{ steps.scan.outputs.file_list }}
+      file_list: ${{ steps.scan.outputs.file_list }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
