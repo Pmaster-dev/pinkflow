@@ -52,11 +52,14 @@ jobs:
                 });
 
                 if (Array.isArray(response.data) || response.data.type !== 'file' || !response.data.content) {
-                  const reason = Array.isArray(response.data)
-                    ? 'received a directory listing'
-                    : response.data.type !== 'file'
-                      ? `received type "${response.data.type}"`
-                      : 'received empty file content';
+                  let reason = 'received empty file content';
+
+                  if (Array.isArray(response.data)) {
+                    reason = 'received a directory listing';
+                  } else if (response.data.type !== 'file') {
+                    reason = `received type "${response.data.type}"`;
+                  }
+
                   throw new Error(`Unable to read ${configPath} at ${source.owner}/${source.repo}@${source.ref}: ${reason}.`);
                 }
 
@@ -64,7 +67,7 @@ jobs:
                 break;
               } catch (error) {
                 if (error.status !== 404) {
-                  throw error;
+                  throw new Error(`Failed to load ${configPath} from ${source.owner}/${source.repo}@${source.ref}: ${error.message}`);
                 }
               }
             }
