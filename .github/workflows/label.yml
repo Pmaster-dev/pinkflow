@@ -26,10 +26,11 @@ jobs:
             const path = require('path');
             const configPath = '.github/labeler.yml';
             const pullRequest = context.payload.pull_request;
+            const headRepo = pullRequest.head.repo;
             const sources = [
               {
-                owner: pullRequest.head.repo?.owner?.login,
-                repo: pullRequest.head.repo?.name,
+                owner: headRepo ? headRepo.owner.login : undefined,
+                repo: headRepo ? headRepo.name : undefined,
                 ref: pullRequest.head.sha,
               },
               {
