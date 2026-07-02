@@ -28,17 +28,17 @@ jobs:
             const pullRequest = context.payload.pull_request;
             const headRepo = pullRequest.head.repo;
             const sources = [
-              {
-                owner: headRepo ? headRepo.owner.login : undefined,
-                repo: headRepo ? headRepo.name : undefined,
+              ...(headRepo ? [{
+                owner: headRepo.owner.login,
+                repo: headRepo.name,
                 ref: pullRequest.head.sha,
-              },
+              }] : []),
               {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: pullRequest.base.sha,
               },
-            ].filter((source) => source.owner && source.repo && source.ref);
+            ];
 
             let configContent;
 
@@ -52,7 +52,12 @@ jobs:
                 });
 
                 if (Array.isArray(response.data) || response.data.type !== 'file' || !response.data.content) {
-                  throw new Error(`Unsupported response for ${configPath} at ${source.owner}/${source.repo}@${source.ref}`);
+                  const reason = Array.isArray(response.data)
+                    ? 'received a directory listing'
+                    : response.data.type !== 'file'
+                      ? `received type "${response.data.type}"`
+                      : 'received empty file content';
+                  throw new Error(`Unable to read ${configPath} at ${source.owner}/${source.repo}@${source.ref}: ${reason}.`);
                 }
 
                 configContent = Buffer.from(response.data.content, response.data.encoding).toString('utf8');
