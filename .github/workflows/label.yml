@@ -17,6 +17,81 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/labeler@v4
-      with:
-        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Fetch labeler config from pull request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const core = require('@actions/core');
+            const fs = require('fs');
+            const path = require('path');
+            const configPath = '.github/labeler.yml';
+            const pullRequest = context.payload.pull_request;
+            const headRepo = pullRequest.head.repo;
+            const isSameRepositoryPullRequest = headRepo && headRepo.full_name === `${context.repo.owner}/${context.repo.repo}`;
+            const sources = [
+              ...(isSameRepositoryPullRequest ? [{
+                owner: headRepo.owner.login,
+                repo: headRepo.name,
+                ref: pullRequest.head.sha,
+              }] : []),
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: pullRequest.base.sha,
+              },
+            ];
+
+            let configContent;
+
+            for (const source of sources) {
+              let response;
+
+              try {
+                response = await github.rest.repos.getContent({
+                  owner: source.owner,
+                  repo: source.repo,
+                  path: configPath,
+                  ref: source.ref,
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  continue;
+                }
+
+                throw new Error(`Failed to load ${configPath} from ${source.owner}/${source.repo}@${source.ref}: ${error.message}`);
+              }
+
+              let reason;
+
+              if (Array.isArray(response.data)) {
+                reason = 'received a directory listing';
+              } else if (response.data.type !== 'file') {
+                reason = `received type "${response.data.type}"`;
+              } else if (response.data.content === undefined) {
+                reason = 'received no file content';
+              }
+
+              if (reason) {
+                throw new Error(`Unable to read ${configPath} at ${source.owner}/${source.repo}@${source.ref}: ${reason}.`);
+              }
+
+              try {
+                configContent = Buffer.from(response.data.content, response.data.encoding).toString('utf8');
+              } catch (error) {
+                throw new Error(`Unable to decode ${configPath} at ${source.owner}/${source.repo}@${source.ref} using ${response.data.encoding}: ${error.message}`);
+              }
+
+              break;
+            }
+
+            if (!configContent) {
+              core.setFailed(`Unable to load ${configPath} from the pull request head or base branch.`);
+              return;
+            }
+
+            fs.mkdirSync(path.dirname(configPath), { recursive: true });
+            fs.writeFileSync(configPath, configContent);
+
+      - uses: actions/labeler@v4
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
