@@ -2,7 +2,7 @@ name: Chromium Pipeline – Docker Build & Artifacts
 
 on:
   push:
-    branches: ["master"]
+    branches: ["main"]
     paths:
       - "src/**"
       - "webapp/**"
