@@ -9,7 +9,7 @@ on:
       - "marketing-site/**"
       - ".github/workflows/chromium-pipeline.yml"
   pull_request:
-    branches: ["master"]
+    branches: ["main"]
     paths:
       - "src/**"
       - "webapp/**"
