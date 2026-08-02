@@ -14,6 +14,9 @@ on:
           - aggressive
           - skip
 
+permissions:
+  contents: read
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
