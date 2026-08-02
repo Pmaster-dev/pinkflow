@@ -3,7 +3,7 @@ name: Build Community Context (local)
 on:
   workflow_dispatch:
   schedule:
-   -cron: '0 4 * * *' # weekly at 04:00 UTC
+    - cron: '0 4 * * *' # daily at 04:00 UTC
 jobs:
   build-and-open-pr:
     runs-on: ubuntu-latest
@@ -12,12 +12,12 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -40,4 +40,4 @@ jobs:
             This PR was created by the scheduled Community Context Builder (local).
             Please review the generated config/context.json, verify sources, and merge when approved.
           labels: auto-generated,context-builder
-          path: config/context.json
+          add-paths: config/context.json
